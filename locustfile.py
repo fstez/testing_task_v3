@@ -1,24 +1,56 @@
 from locust import HttpUser, task, between
+import random
+import string
 
-# See on lihtne Locust-fail stress-testimiseks.
-# See simuleerib kasutajaid, kes külastavad erineva kiirusega lehti.
+def random_user():
+    # Genereerib juhusliku kasutajanime
+    return "user_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
 
 class WebsiteUser(HttpUser):
-    # Iga virtuaalne kasutaja ootab 1 kuni 3 sekundit enne uue tegevuse alustamist.
     wait_time = between(1, 3)
 
-    @task(3) # See tegevus on 3x tõenäolisem kui teised
-    def visit_fast_page(self):
-        """See funktsioon simuleerib kiire lehe külastust."""
-        # self.client on nagu 'requests' teek, aga Locust haldab seda.
+    @task
+    def fast_page(self):
         self.client.get("/fast")
-
-    @task(2) # See tegevus on 2x tõenäolisem
-    def visit_medium_page(self):
-        """See funktsioon simuleerib keskmise kiirusega lehe külastust."""
+    
+    @task
+    def medium_page(self):
         self.client.get("/medium")
-
-    @task(1) # See tegevus on kõige vähem tõenäoline
-    def visit_slow_page(self):
-        """See funktsioon simuleerib aeglase lehe külastust."""
+    
+    @task
+    def slow_page(self):
         self.client.get("/slow")
+    
+    @task
+    def register(self):
+        uname = random_user()
+        pw = "testpass123"
+        self.client.post("/api/register", json={"username": uname, "password": pw})
+    
+    @task
+    def login(self):
+        uname = "testuser" # testuser peab olema olemas! Või loo jooksvalt
+        pw = "testpass123"
+        self.client.post("/api/login", json={"username": uname, "password": pw})
+    
+    @task
+    def create_todo(self):
+        todo = {"title": "Test ülesanne", "description": "Automaatne", "priority": "medium"}
+        self.client.post("/api/todos", json=todo)
+    
+    @task
+    def get_todos(self):
+        self.client.get("/api/todos")
+    
+    @task
+    def update_todo(self):
+        # Eeldab olemasolevat todo id-d (1), testimiseks võib olla vaja salvestada id!
+        self.client.put("/api/todos/1", json={"title": "Uuendatud", "completed": True})
+    
+    @task
+    def delete_todo(self):
+        self.client.delete("/api/todos/1")
+    
+    @task
+    def change_password(self):
+        self.client.post("/api/change-password", json={"old_password": "testpass123", "new_password": "testpass456"})
